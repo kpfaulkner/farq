@@ -13,7 +13,8 @@ import scala.collection.mutable.Map
 import net.lag.configgy.Configgy
 import net.lag.logging.Logger
 import scala.collection.mutable.ArrayBuffer
-import FARQ.Datatypes.Entry
+import FARQ.Datatypes._
+
 
 object FARQCommands
 {
@@ -135,7 +136,22 @@ class FARQHandler(fq: FARQueue) extends Actor
 
       var resp = farq !? ( queueTimeout , FARQCommands.getCommand   )
       
-      log.debug("get response is " + resp.get.toString() )
+      var response = resp.get.asInstanceOf[ (Status, Entry)]
+      
+      log.debug("status is " + response._1.toString() )
+      
+      if ( response._1.code == StatusCodes.GET_SUCCESS )
+      {
+        var entry = response._2
+        
+        val os = socket.getOutputStream
+        val dos = new DataOutputStream( os )
+        
+        log.debug("writing " + entry.data.toString() )
+        dos.write( entry.data )
+        
+      }
+
     }
     catch
     {

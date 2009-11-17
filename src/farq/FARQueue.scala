@@ -15,12 +15,17 @@ class FARQueue extends Actor
   val log = Logger.get
 
   // main queue.
+  // will only allow to grow so large.
   var queue = new Queue[ Entry ]()
   
   // put here if we're trying to retrieve it.
   // will be invisible for a while, but then returned to visible 
   // if not deleted.
   var invisibleQueue = new Queue[ Entry] ()
+  
+  val maxQueueSize = Integer.parseInt( Configgy.config.getString("queue_size", "200" ) )
+  
+  var persistQueue = new PersistQueue()
   
   def act()
   {
@@ -53,7 +58,7 @@ class FARQueue extends Actor
           sender ! ( new Status(  statusCode ), e)
         }
         
-        case ( FARQCommands.getCommand, key:String ) =>
+        case ( FARQCommands.delCommand, key:String ) =>
         {
           // delete existing one.
         }
@@ -69,8 +74,17 @@ class FARQueue extends Actor
     log.debug("entry is " + entry.toString() )
     log.debug("entry key is " + entry.key )
     
-    queue += entry
+    log.debug("existing length is " + queue.length.toString() )
     
+    if ( queue.length < maxQueueSize )
+    {
+      queue += entry
+    }
+    else 
+    {
+      persistQueue.add( entry )
+      
+    }
   }
 
   // shift from real Q to invisible Q.
@@ -82,10 +96,16 @@ class FARQueue extends Actor
     
     try
     {
+      if ( queue.length ==  0 )
+      {
+        
+        queue = persistQueue.getQueueBlock()
+      }
+      
       entry = queue.dequeue
-      
+    
       entry.isInvisible = true
-      
+    
       invisibleQueue += entry
     
     }
