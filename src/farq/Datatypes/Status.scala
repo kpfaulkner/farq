@@ -1,3 +1,5 @@
+/* Copyright Ken Faulkner 2009 */
+
 package FARQ.Datatypes
 
 

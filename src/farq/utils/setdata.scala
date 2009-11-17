@@ -1,3 +1,4 @@
+/* Copyright Ken Faulkner 2009 */
 package FARQ.utils
 
 import net.lag.configgy.Configgy
