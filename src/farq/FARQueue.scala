@@ -99,8 +99,7 @@ class FARQueue extends Actor
     try
     {
       if ( queue.length ==  0 )
-      {
-        
+      {    
         queue = persistQueue.getQueueBlock()
       }
       
