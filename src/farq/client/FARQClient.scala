@@ -31,29 +31,58 @@ this software without specific prior written permission.
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package FARQ.utils
+
+package FARQ.client
 
 import net.lag.configgy.Configgy
 import net.lag.logging.Logger
 import java.net._
 import java.io._
+import scala.collection.mutable.ArrayBuffer
 
-object GetData
+class FARQClient
 {
-  
   Configgy.configure("farq.cfg")
+  val log = Logger.get
+  
+  var serverIP =  Configgy.config.getString("server_ip", "127.0.0.1" ) 
+  var serverPort =  Integer.parseInt( Configgy.config.getString("server_port", "9999" ) ) 
+    
+  
+  // assume the client has already created array of bytes.
+  def push( queueName:String, data: Array[Byte] ) =
+  {
+        
+    log.info("FARQClient::push start")
+    
+    log.debug("server " + serverIP )
+    log.debug("port " + serverPort.toString())
+    
+    var s = new Socket( serverIP, serverPort)
+    var out = s.getOutputStream
+    var dos = new DataOutputStream( out )
 
-  var serverPort = Integer.parseInt( Configgy.config.getString("port", "9999" ) )
-  var serverIP = Configgy.config.getString("server_ip", "127.0.0.1" ) 
-  def sendGet() =
+    var request = "SET"+queueName+"|"
+    var req = request.getBytes
+    
+    dos.write( req  )
+   
+    dos.writeInt( data.length )
+    
+    dos.write( data, 0, data.length )
+    
+    s.close()
+  }
+
+  
+  def pop( queueName: String ): Array[Byte ] =
   {
 
 
     
-    var s = new Socket(serverIP, serverPort)
+    var s = new Socket( serverIP, serverPort)
     
-    var out = s.getOutputStream
-    
+    var out = s.getOutputStream    
     var dos = new DataOutputStream( out )
     
     var request = "GET".getBytes
@@ -61,26 +90,37 @@ object GetData
     dos.write( request )
     
     var inp = s.getInputStream
-    
     var dis = new DataInputStream( inp )
     
-    var l = dis.readInt()
-    println("length is " + l.toString() )
-    
-    var data = new Array[Byte](10)
-    
-    dis.read( data )
-    
-    println("data is " + data.toString() )
+    var length = dis.readInt()
+    var data = new ArrayBuffer[Byte]()
+      
+    // length of data to read.
+    if ( length > 0 )
+    {
+      var buffer = new Array[Byte](1024)
+      var count = 0
+      
+      while ( count < length )
+      {
+        var res = dis.read( buffer )
+        count += res
+      
+        // append the data read.
+        data ++= ( buffer, 0, res )    
+      }
+      
+    }
     
     s.close()    
+    
+    return data.toArray
+    
   } 
+    
   
-  def main(args: Array[String]) =
-  {
-
-    sendGet()
-  }
+  
 }
+
 
 

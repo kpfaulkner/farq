@@ -93,7 +93,7 @@
   </dependencies>
 
   <build>
-    <sourceDirectory>src</sourceDirectory>
+    <sourceDirectory>src/farq</sourceDirectory>
     <testSourceDirectory>src/test</testSourceDirectory>
     <plugins>
     
