@@ -45,12 +45,16 @@ class FARQClient
   Configgy.configure("farq.cfg")
   val log = Logger.get
   
-  var serverIP =  Configgy.config.getString("server_ip", "127.0.0.1" ) 
-  var serverPort =  Integer.parseInt( Configgy.config.getString("server_port", "9999" ) ) 
+  var serverIP =  Configgy.config.getString("farq_server", "127.0.0.1" ) 
+  var serverPort =  Integer.parseInt( Configgy.config.getString("farq_port", "9998" ) ) 
     
   
+
+  
+  
+  
   // assume the client has already created array of bytes.
-  def push( queueName:String, data: Array[Byte] ) =
+  def push( queueName:String, data: Array[Byte] )  =
   {
         
     log.info("FARQClient::push start")
@@ -72,8 +76,18 @@ class FARQClient
     dos.write( data, 0, data.length )
     
     s.close()
+
+    
   }
 
+  
+  def pushString( queueName:String, data:String )  =
+  {
+  
+    push( queueName, data.getBytes)
+
+    
+  }
   
   def pop( queueName: String ): Array[Byte ] =
   {
@@ -118,9 +132,15 @@ class FARQClient
     
   } 
     
-  
+  def popString( queueName:String ) : String = 
+  {
+    var b:Array[Byte] = pop( queueName )
+    var s = new String( b )
+    
+    return s
+    
+  }
   
 }
-
 
 

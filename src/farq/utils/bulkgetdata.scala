@@ -72,7 +72,7 @@ object BulkGetData
       
       dis.read( data )
       
-      println("data is " + data.toString() )
+      println("data is " + new String( data ) )
       
       s.close()    
       

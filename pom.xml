@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>farq</groupId>
   <artifactId>farq</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>0.1</version>
   <name>farq</name>
   <inceptionYear>2009</inceptionYear>
   <properties>

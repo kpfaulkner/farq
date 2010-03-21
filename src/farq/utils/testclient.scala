@@ -37,76 +37,39 @@ import net.lag.configgy.Configgy
 import net.lag.logging.Logger
 import java.net._
 import java.io._
+import FARQ.client._
 
 object TestClient
 {
   
-  Configgy.configure("farq.cfg")
+  var c = new FARQClient()
   
-  def sendSet() =
+  
+  def getAll( q:String ) =
   {
-
-    var data = new Array[Byte](10)
-    
-    data(0) = 1
-    data(1) = 5
-    data(2) = 6
-    data(3) = 8
-    data(4) = 8
-    data(5) = 9
-    
-    var s = new Socket("127.0.0.1", 9999)
-    
-    var out = s.getOutputStream
-    
-    var dos = new DataOutputStream( out )
-    
-    var request = "SETMYKEY|".getBytes
-    
-    dos.write( request )
-   
-    dos.writeInt( data.length )
-    
-    dos.write( data, 0, data.length )
-    
-
-    s.close()    
+    // get all content and print it.
+    // hard coded but just for a bit of testing.
+    var quit = false
+    while (!quit )
+    {
+      var r = c.popString( q )
+      
+      if ( r == "" )
+      {
+        quit = true  
+      }
+      else
+      {
+        println( r )
+      }
+    }
   }
-
-  def sendGet() =
-  {
-
-
-    
-    var s = new Socket("127.0.0.1", 9999)
-    
-    var out = s.getOutputStream
-    
-    var dos = new DataOutputStream( out )
-    
-    var request = "GET".getBytes
-    
-    dos.write( request )
-    Thread.sleep(100)
-    
-    var inp = s.getInputStream
-    
-    var dis = new DataInputStream( inp )
-    
-    var data = new Array[Byte](10)
-    
-    dis.read( data )
-    
-    println("data is " + data.toString() )
-    
-    s.close()    
-  } 
   
   def main(args: Array[String]) =
   {
 
-    sendSet()
-    sendGet()
+    var q = args(0)
+    getAll( q )
   }
 }
 
