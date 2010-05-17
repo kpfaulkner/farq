@@ -10,8 +10,8 @@ Building:
 
 Scala 2.7.* and maven 2.*.* are required.
 
-
 mvn clean install
+
 
 Running:
 --------
