@@ -30,42 +30,6 @@
 
   <dependencies>
 
-  <!-- 
-<dependency>
-    <groupId>org.apache.httpcomponents</groupId>
-    <artifactId>httpclient</artifactId>
-    <version>4.0</version>
-    <scope>compile</scope>
-  </dependency>
--->
-
-<dependency>
-    <groupId>joda-time</groupId>
-    <artifactId>joda-time</artifactId>
-    <version>1.6</version>
-</dependency>
-
-<dependency>
-    <groupId>commons-httpclient</groupId>
-    <artifactId>commons-httpclient</artifactId>
-    <version>3.1</version>
-  </dependency>
-      <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>1.4</version>
-    </dependency> 
-  
-    <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-      <version>1.4</version>
-    </dependency> 
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <version>1.1.1</version>
-    </dependency> 
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
@@ -86,7 +50,7 @@
     <dependency>
       <groupId>net.lag</groupId>
       <artifactId>configgy</artifactId>
-      <version>1.2.1a</version>
+      <version>1.4.7</version>
       <scope>compile</scope>
     </dependency>
     
@@ -168,7 +132,7 @@
             <phase>generate-sources</phase>
             <goals><goal>copy-dependencies</goal></goals>
             <configuration>
-              <outputDirectory>${project.build.outputDirectory}:.</outputDirectory>
+              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
               <stripVersion>true</stripVersion>
               <excludeTransitive>true</excludeTransitive>
               <excludeArtifactIds>junit</excludeArtifactIds>

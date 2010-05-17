@@ -38,8 +38,6 @@ import scala.actors.Actor
 import scala.actors.Actor._
 import java.net._
 import java.io._
-import org.apache.commons.httpclient._
-import org.apache.commons.httpclient.methods._
 import net.lag.configgy.Configgy
 import net.lag.logging.Logger
 import scala.collection.mutable.ListBuffer
