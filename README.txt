@@ -4,6 +4,8 @@ Fast Asynchronous Reliable Queue (FARQ):
 FARQ is a simple queue system written in Scala. So far it's purely used to "scratch my own itch" but am also using it as a way of 
 forcing myself to learn more and more Scala.
 
+This is a branch for making the queue elements persist to storage immediately as opposed to waiting until an in memory buffer gets full.
+Unsure how this will go performance wise, but want to test. 
 
 Building:
 ---------
