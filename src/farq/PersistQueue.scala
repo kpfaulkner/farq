@@ -58,6 +58,16 @@ class PersistQueue
   val maxQueueSize = Integer.parseInt( Configgy.config.getString("queue_size", "200" ) )
   var cacheDir = Configgy.config.getString("queue_dir", "cache" )
   
+  var outFileStream:FileOutputStream = null
+  //var outStream = new ObjectOutputStream( outFile )
+      
+  def open( fn: String) =
+  {
+    outFileStream = new FileOutputStream( fn )
+  
+  }
+  
+  
   def add( entry: Entry ) =
   {
     log.info("PersistQueue::add start")   

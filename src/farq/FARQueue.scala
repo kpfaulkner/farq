@@ -52,17 +52,25 @@ class FARQueue extends Actor
   
   val log = Logger.get
 
-  // main queue.
-  // will only allow to grow so large.
+  // main write queue.
   var queue = new Queue[ Entry ]()
+  
+  // fallback read queue, incase reading to too slow.
+  var readQueue = new Queue[ Entry]()
+  
+  // indicate if read queue should be used.
+  var useReadQueue = false
   
   // put here if we're trying to retrieve it.
   // will be invisible for a while, but then returned to visible 
   // if not deleted.
   // really a list.
-  var invisibleQueue =  List[ Entry] ()
+  var invisibleQueue =  List[ Entry ]()
   
   val maxQueueSize = Integer.parseInt( Configgy.config.getString("queue_size", "200" ) )
+
+  // used to bumping off content.
+  var resizeFactor = Configgy.config.getFloat("resize_factor", 0.5)
   
   var persistQueue = new PersistQueue()
   
@@ -120,15 +128,18 @@ class FARQueue extends Actor
     entry.id = idCount
     idCount += 1
     
-    if ( queue.length < maxQueueSize )
+    // add to memory queue.
+    queue += entry
+    
+    // if memory queue too long, then trim a percentage.
+    while ( queue.length > maxQueueSize * resizeFactor )
     {
-      queue += entry
+      queue.dequeue
     }
-    else 
-    {
-      persistQueue.add( entry )
-      
-    }
+    
+    // persist the entry to disk.
+    persistQueue.add( entry )
+    
   }
 
   // shift from real Q to invisible Q.
