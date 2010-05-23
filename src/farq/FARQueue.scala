@@ -59,6 +59,8 @@ class FARQueue extends Actor
   var readQueue = new Queue[ Entry]()
   
   // indicate if read queue should be used.
+  // This should only be set to true if the reading of the queue isn't
+  // being performed quick enough and a back log starts to happen.
   var useReadQueue = false
   
   // put here if we're trying to retrieve it.
@@ -151,6 +153,20 @@ class FARQueue extends Actor
     
     try
     {
+    
+      // check which queue we should be using.
+      if (  useReadQueue )
+      {
+      
+      }
+      else
+      {
+      
+        // just use regular Q....
+        
+      }
+      
+      
       if ( queue.length ==  0 )
       {    
         queue = persistQueue.getQueueBlock()
