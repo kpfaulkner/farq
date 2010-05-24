@@ -142,6 +142,8 @@ class FARQHandler(fq: FARQueue) extends Actor
       var entry = new Entry( key )
       entry.data = data.toArray
       
+      log.debug("entry data is " + entry.data.toString() )
+      
       // bad form with !? dangerous?
       var resp = farq !? ( queueTimeout, (FARQCommands.setCommand, entry ) )
       //farq ! (FARQCommands.setCommand, entry )

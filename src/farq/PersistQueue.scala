@@ -40,6 +40,8 @@ import net.lag.logging.Logger
 import scala.collection.mutable.Queue
 import java.io.FileOutputStream
 import java.io.FileInputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.ObjectOutputStream
 import java.io.ObjectInputStream
 
@@ -50,40 +52,44 @@ class PersistQueue
 {
 
   val log = Logger.get
-
-  // in memory Q.
-  var queue = new Queue[ Entry ]()
   
   // queue sizes.
-  val maxQueueSize = Integer.parseInt( Configgy.config.getString("queue_size", "200" ) )
   var cacheDir = Configgy.config.getString("queue_dir", "cache" )
+  var persistQueueSize = Configgy.config.getInt("persist_queue_size ", 1000000 )
   
+  // for writing. duh
   var outFileStream:FileOutputStream = null
-  //var outStream = new ObjectOutputStream( outFile )
-      
-  def open( fn: String) =
+  var dataOutputStream:DataOutputStream = null
+  
+  // for reading. double duh.
+  var inFileStream:FileInputStream = null
+  
+  var fileSize = 0
+
+  openNewStream()
+  
+  def openOldestPersistedQueue( ) =
   {
-    outFileStream = new FileOutputStream( fn )
+    var fn = getOldestFilename()
+    openStreamForReading( fn )
+  }
+  
+  
+  def openStreamForReading( fn: String) =
+  {
+    inFileStream = new FileInputStream( fn )
   
   }
   
   
-  def add( entry: Entry ) =
+  // open new stream...   how to determine filename?
+  def openNewStream( ) =
   {
-    log.info("PersistQueue::add start")   
-    if ( queue.length < maxQueueSize )
-    {
-      queue += entry
-    }
-    else
-    {
-      // store, clear then add.
-      store()
-      queue.clear()
-      
-      queue += entry
-    }
+    var fn = cacheDir + "/" + System.nanoTime().toString()
     
+    // true param for allowing appending.
+    outFileStream = new FileOutputStream( fn, true )
+    dataOutputStream = new DataOutputStream( outFileStream )  
   }
   
   def getOldestFilename( ) : String =
@@ -108,89 +114,80 @@ class PersistQueue
     return fn
     
   }
-  
-  
-  def getQueueBlock( ): Queue[Entry ] =
+  def add( entry: Entry ):Boolean =
   {
-    log.info("PersistQueue::getQueueBlock start")
+    log.info("PersistQueue::add start")
     
-    // get oldest block on disk.
+    // add to existing OPEN file stream (need to check about reopening if required)
+    
+    // write ID of entry.
+    dataOutputStream.writeInt( entry.id )
+    
+    // Write length of data, then data itself.
+    dataOutputStream.writeInt( entry.data.length)
+    
+    // write data itself
+    dataOutputStream.write( entry.data )
+    
+    fileSize += entry.data.length
+    
+    // if stream is too big, then close it and open another.
+    if ( fileSize > persistQueueSize  )
+    {
+      // close stream
+      outFileStream.close()
+      
+      // open new stream.
+      openNewStream()
+      
+    }
+    
+    return true
+    
+  }
+  
+  def closeAllStreams() =
+  {
+    if ( outFileStream != null )
+    {
+      outFileStream.close()
+      dataOutputStream.close()
+    }
+    
+    if ( inFileStream != null )
+    {
+      inFileStream.close()
+    }
+    
+  }
+  
+  def loadOldestPersistedQueue(  ): Queue[Entry] =
+  {
+    
+    var q = new Queue[ Entry ]()
+    var done = false
     var fn = getOldestFilename()
-    
-    var q = new Queue[Entry]()
-    
-    if ( fn != "" )
+    var inFileStream = new FileInputStream( fn )
+    var dis = new DataInputStream( inFileStream )
+    while ( !done )
     {
-      q = retrieve( fn )
+      var entryId = dis.readInt()
+      var length = dis.readInt()
       
-    } else
-    {
-      // return the in memory queue... since nothing is on disk.
+      var buffer = new Array[Byte]( length )
       
-      q = queue.clone()
-      queue.clear()
-      
+      dis.read( buffer, 0, length )
+      var entry = new Entry("DUMMY")
+      entry.id = entryId
+      entry.data = buffer
+      q += entry
     }
     
-    return q
-  }
-  
-  def store() =
-  {
-    log.info("PersistQueue::store start")
-    
-    try
-    {
-      // stores queue to disk.
-      
-      // hardcoded slash!!!
-      var fn = cacheDir + "/" + System.nanoTime().toString()
-      
-      var outFile = new FileOutputStream( fn )
-      var outStream = new ObjectOutputStream( outFile )
-  
-      outStream.writeObject( queue )
-      outStream.close()
-
-    }
-    catch
-    {
-      case ex: Exception =>
-        log.error("PersistQueue::store exception " + ex.toString() )
-    } 
-      
-  }
-  
-  def retrieve( fn: String): Queue[ Entry ] =
-  {
-    // loads from file.
-    log.info("PersistQueue::retrieve start")
-
-    var q = new Queue[Entry]()
-    
-    try
-    {
-
-      var inFile = new FileInputStream( fn )
-      var inStream = new ObjectInputStream( inFile )
-
-      q = inStream.readObject().asInstanceOf[ Queue[Entry] ] 
-      
-      inStream.close()
-
-      // delete it.
-      var f = new File( fn )
-      f.delete()
-      
-    }
-    catch
-    {
-      case ex: Exception =>
-        log.error("PersistQueue::retrieve exception " + ex.toString() )
-    }   
-    
+    dis.close()
+    inFileStream.close()
     return q
     
   }
+  
   
 }

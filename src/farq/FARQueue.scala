@@ -47,7 +47,7 @@ class FARQueue extends Actor
 {
 
   // this is fraught with dangers....
-  var idCount = 0 
+  var idCount = 1
   
   
   val log = Logger.get
@@ -57,6 +57,9 @@ class FARQueue extends Actor
   
   // fallback read queue, incase reading to too slow.
   var readQueue = new Queue[ Entry]()
+  
+  // last id of the entry returned.
+  var lastReadId = 0
   
   // indicate if read queue should be used.
   // This should only be set to true if the reading of the queue isn't
@@ -72,7 +75,7 @@ class FARQueue extends Actor
   val maxQueueSize = Integer.parseInt( Configgy.config.getString("queue_size", "200" ) )
 
   // used to bumping off content.
-  var resizeFactor = Configgy.config.getFloat("resize_factor", 0.5)
+  var resizeFactor = Configgy.config.getString("resize_factor", "0.5").toFloat
   
   var persistQueue = new PersistQueue()
   
@@ -118,6 +121,7 @@ class FARQueue extends Actor
     }
   }
   
+  // FIXME: Throw exception/error for failed add.
   def handleSet( entry:Entry ) =
   {
     log.info("FARQueue::handleSet start")
@@ -130,17 +134,30 @@ class FARQueue extends Actor
     entry.id = idCount
     idCount += 1
     
-    // add to memory queue.
-    queue += entry
-    
-    // if memory queue too long, then trim a percentage.
-    while ( queue.length > maxQueueSize * resizeFactor )
-    {
-      queue.dequeue
-    }
-    
     // persist the entry to disk.
-    persistQueue.add( entry )
+    var persisted = persistQueue.add( entry )
+    
+    if ( persisted )
+    {
+      // if using read queue, then dont need to add to memory queue, just add directly to
+      // persist queue.
+      if ( !useReadQueue )
+      {
+        // add to memory queue.
+        queue += entry
+      
+      }
+       
+      // if memory queue too long, then trim a percentage.
+      while ( queue.length > maxQueueSize * resizeFactor )
+      {
+        queue.dequeue
+      }   
+    }
+    else
+    {
+      log.error("FARQueue::handleSet error. Cant persiste entry " + entry.id.toString() )
+    }
     
   }
 
@@ -153,31 +170,30 @@ class FARQueue extends Actor
     
     try
     {
-    
-      // check which queue we should be using.
-      if (  useReadQueue )
+      // loop until we either get NO entry (empty queues) or we get an entry.id
+      // that is greater than the lastReadId value
+      var done = false
+      log.debug("lastReadId is " + lastReadId.toString() )
+      while ( ! done )
       {
-      
-      }
-      else
-      {
-      
-        // just use regular Q....
-        
-      }
-      
-      
-      if ( queue.length ==  0 )
-      {    
-        queue = persistQueue.getQueueBlock()
-      }
-      
-      entry = queue.dequeue
+        entry = getNextEntry()
+        if ( entry != null )
+        {
+          log.debug("entry retrieved is " + entry.id.toString() )
+        }
+        if (( entry == null) || ( entry.id > lastReadId ))
+        {
+          log.debug("marking true")
+          
+          if ( entry != null )
+          {
+            lastReadId = entry.id
+          }
     
-      entry.isInvisible = true
-    
-      invisibleQueue += entry
-    
+          done = true
+        }
+      }
+      
     }
     catch
     {
@@ -185,8 +201,66 @@ class FARQueue extends Actor
         log.error("FARQueue::handleGet exception " + ex.toString() )
     } 
     
+    if ( entry != null )
+    {
+      lastReadId = entry.id
+    }
+    
     return entry
   }
+
+  // shift from real Q to invisible Q.
+  def getNextEntry( ): Entry =
+  {
+    log.info("FARQueue::getNextEntry start")
+    
+    var entry:Entry = null
+    
+    try
+    {
+    
+      // check which queue we should be using.
+      if (  useReadQueue )
+      {
+        // try reading from readQueue
+        // if empty, try and reload from persist queue.
+        if ( readQueue.isEmpty )
+        {
+          // load from persist.
+          readQueue = persistQueue.loadOldestPersistedQueue()
+          
+        }
+        
+        if ( !readQueue.isEmpty)
+        {
+          entry = readQueue.dequeue
+        }     
+      }
+      else
+      {
+        log.debug("not in read behind mode")
+        
+        // just use regular Q....
+        if ( !queue.isEmpty )
+        {
+          log.debug("queue size is " + queue.size.toString() )
+          entry = queue.dequeue
+          
+          log.debug("queue not empty, had entry " + entry.id.toString() )
+        }
+      }
+      
+    }
+    catch
+    {
+      case ex: Exception =>
+        log.error("FARQueue::handleGet exception " + ex.toString() )
+    } 
+    
+    
+    return entry
+  }
+
 
   // remove entry from invisible Q with given id.
   def handleDel( id:Int )  =
