@@ -111,6 +111,7 @@ class PersistQueue
       fn = fileList(0).getPath()
     }
     
+    log.debug("oldest filename " + fn )
     return fn
     
   }
@@ -169,18 +170,27 @@ class PersistQueue
     var fn = getOldestFilename()
     var inFileStream = new FileInputStream( fn )
     var dis = new DataInputStream( inFileStream )
-    while ( !done )
+    
+    try
     {
-      var entryId = dis.readInt()
-      var length = dis.readInt()
-      
-      var buffer = new Array[Byte]( length )
-      
-      dis.read( buffer, 0, length )
-      var entry = new Entry("DUMMY")
-      entry.id = entryId
-      entry.data = buffer
-      q += entry
+      while ( !done )
+      {
+       var entryId = dis.readInt()
+       var length = dis.readInt()
+       
+       var buffer = new Array[Byte]( length )
+       
+       dis.read( buffer, 0, length )
+       var entry = new Entry("DUMMY")
+       entry.id = entryId
+       entry.data = buffer
+       q += entry
+     }
+    }
+    catch
+    {
+      case ex: Exception =>
+        log.debug("FARQHandler::loadOldestPersistedQueue end of file" )
     }
     
     dis.close()

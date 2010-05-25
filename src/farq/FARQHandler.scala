@@ -189,6 +189,7 @@ class FARQHandler(fq: FARQueue) extends Actor
       }
       else
       {
+        log.debug("sending response 0")
         // send 4 bytes. with 0, indicating kaput
         dos.writeInt( 0 )
         
