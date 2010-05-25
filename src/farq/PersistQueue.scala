@@ -66,7 +66,7 @@ class PersistQueue
   
   var fileSize = 0
 
-  openNewStream()
+  //openNewStream()
   
   def openOldestPersistedQueue( ) =
   {
@@ -120,7 +120,11 @@ class PersistQueue
     log.info("PersistQueue::add start")
     
     // add to existing OPEN file stream (need to check about reopening if required)
-    
+    if (dataOutputStream == null )
+    {
+      openNewStream()
+      
+    }
     // write ID of entry.
     dataOutputStream.writeInt( entry.id )
     
@@ -162,39 +166,88 @@ class PersistQueue
     
   }
   
-  def loadOldestPersistedQueue(  ): Queue[Entry] =
+  def loadOldestPersistedQueue( lastReadId:Int ): Queue[Entry] =
   {
+    
+    log.info("PersistQueue:loadOldestPersistedQueue start")
     
     var q = new Queue[ Entry ]()
     var done = false
     var fn = getOldestFilename()
-    var inFileStream = new FileInputStream( fn )
-    var dis = new DataInputStream( inFileStream )
-    
-    try
+    var previousFileName = ""
+    while ( ( fn != "") && (!done) )
     {
-      while ( !done )
+      log.debug("fn is "+ fn )
+      
+      var inFileStream = new FileInputStream( fn )
+      var dis = new DataInputStream( inFileStream )
+      
+      try
       {
-       var entryId = dis.readInt()
-       var length = dis.readInt()
+        while ( !done )
+        {
+         log.debug("reading data")
+         var entryId = dis.readInt()
+         var length = dis.readInt()
+         
+         var buffer = new Array[Byte]( length )
+         
+         dis.read( buffer, 0, length )
+         
+         // only want ones we haven't delivered.
+         if ( entryId > lastReadId )
+         {
+           log.debug("appending to q")
+           var entry = new Entry("DUMMY")
+           entry.id = entryId
+           entry.data = buffer
+           q += entry
+         }
+       }
        
-       var buffer = new Array[Byte]( length )
+  
+      }
+      catch
+      {
+        case ex: Exception =>
+          log.debug("FARQHandler::loadOldestPersistedQueue end of file" )
+      }
+      
+      log.debug("queue length is " + q.size.toString() )
+      
+
+      dis.close()
+      inFileStream.close()
+      previousFileName = fn
+      fn = getOldestFilename()
+      
+      // if we get here and the q is empty it means the entire persist file only has old information
+      // which means it can be deleted.
+      // inefficient, but will do for now until proven otherwise.
+      // HACK HACK HACK HORRIBLE STUFF.
+      if ( q.isEmpty )
+      {
+        if (fn == previousFileName )
+        {
+          closeAllStreams()
+        
+        }
+        
+        var fn2 = ".\\"+fn
+        log.debug("deleting file " + fn2)
+        dis.close()
+        inFileStream.close()
+        
+        // delete file.
+        new File( fn2 ).delete
        
-       dis.read( buffer, 0, length )
-       var entry = new Entry("DUMMY")
-       entry.id = entryId
-       entry.data = buffer
-       q += entry
-     }
+      }
+      else
+      {
+        // have data from a file.
+        done = true
+      }
     }
-    catch
-    {
-      case ex: Exception =>
-        log.debug("FARQHandler::loadOldestPersistedQueue end of file" )
-    }
-    
-    dis.close()
-    inFileStream.close()
     return q
     
   }

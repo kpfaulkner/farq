@@ -64,7 +64,7 @@ class FARQueue extends Actor
   // indicate if read queue should be used.
   // This should only be set to true if the reading of the queue isn't
   // being performed quick enough and a back log starts to happen.
-  var useReadQueue = true
+  var useReadQueue = false
   
   // put here if we're trying to retrieve it.
   // will be invisible for a while, but then returned to visible 
@@ -176,6 +176,7 @@ class FARQueue extends Actor
       log.debug("lastReadId is " + lastReadId.toString() )
       while ( ! done )
       {
+        log.debug("in loop")
         entry = getNextEntry()
         if ( entry != null )
         {
@@ -227,14 +228,20 @@ class FARQueue extends Actor
         if ( readQueue.isEmpty )
         {
           // load from persist.
-          readQueue = persistQueue.loadOldestPersistedQueue()
+          // make sure that the queue loaded only has entry id's greater than lastReadId
+          readQueue = persistQueue.loadOldestPersistedQueue( lastReadId )
+          
           
         }
         
         if ( !readQueue.isEmpty)
         {
           entry = readQueue.dequeue
-        }     
+        }
+        else
+        {
+          useReadQueue = false
+        }
       }
       else
       {
