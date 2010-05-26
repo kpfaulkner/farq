@@ -111,10 +111,11 @@ class PersistQueue
       fn = fileList(0).getPath()
     }
     
-    log.debug("oldest filename " + fn )
+    //log.debug("oldest filename " + fn )
     return fn
     
   }
+  
   def add( entry: Entry ):Boolean =
   {
     log.info("PersistQueue::add start")
@@ -141,6 +142,8 @@ class PersistQueue
     {
       // close stream
       outFileStream.close()
+      dataOutputStream.close()
+      dataOutputStream = null // FIXME
       
       // open new stream.
       openNewStream()
@@ -157,6 +160,7 @@ class PersistQueue
     {
       outFileStream.close()
       dataOutputStream.close()
+      dataOutputStream = null
     }
     
     if ( inFileStream != null )
@@ -177,7 +181,7 @@ class PersistQueue
     var previousFileName = ""
     while ( ( fn != "") && (!done) )
     {
-      log.debug("fn is "+ fn )
+      //log.debug("fn is "+ fn )
       
       var inFileStream = new FileInputStream( fn )
       var dis = new DataInputStream( inFileStream )
@@ -186,7 +190,7 @@ class PersistQueue
       {
         while ( !done )
         {
-         log.debug("reading data")
+         //log.debug("reading data")
          var entryId = dis.readInt()
          var length = dis.readInt()
          
@@ -197,7 +201,7 @@ class PersistQueue
          // only want ones we haven't delivered.
          if ( entryId > lastReadId )
          {
-           log.debug("appending to q")
+           //log.debug("appending to q")
            var entry = new Entry("DUMMY")
            entry.id = entryId
            entry.data = buffer
@@ -213,7 +217,7 @@ class PersistQueue
           log.debug("FARQHandler::loadOldestPersistedQueue end of file" )
       }
       
-      log.debug("queue length is " + q.size.toString() )
+      //log.debug("queue length is " + q.size.toString() )
       
 
       dis.close()
@@ -233,8 +237,8 @@ class PersistQueue
         
         }
         
-        var fn2 = ".\\"+fn
-        log.debug("deleting file " + fn2)
+        var fn2 = "./"+fn
+        //log.debug("deleting file " + fn2)
         dis.close()
         inFileStream.close()
         

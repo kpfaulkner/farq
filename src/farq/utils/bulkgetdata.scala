@@ -68,14 +68,16 @@ object BulkGetData
       
       var dis = new DataInputStream( inp )
       
+      var l = dis.readInt()
+      println("length is " + l.toString() )
+      
       var data = new Array[Byte](10)
       
       dis.read( data )
       
-      println("data is " + new String( data ) )
+      println("data is " + data.toString() )
       
       s.close()    
-      
       if ( data(0) == 0 )
         quit = true
       

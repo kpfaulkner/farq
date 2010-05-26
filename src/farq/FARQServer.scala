@@ -91,7 +91,7 @@ class Dispatcher() extends Actor
   {
     loop
     {
-      receive
+      react
       {
         case conn: Connection =>
           val handler = getHandler()

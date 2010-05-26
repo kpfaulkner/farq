@@ -126,10 +126,10 @@ class FARQueue extends Actor
   {
     log.info("FARQueue::handleSet start")
     
-    log.debug("entry is " + entry.toString() )
-    log.debug("entry key is " + entry.key )
+    //log.debug("entry is " + entry.toString() )
+    //log.debug("entry key is " + entry.key )
     
-    log.debug("existing length is " + queue.length.toString() )
+    //log.debug("existing length is " + queue.length.toString() )
     
     entry.id = idCount
     idCount += 1
@@ -152,6 +152,9 @@ class FARQueue extends Actor
       while ( queue.length > maxQueueSize * resizeFactor )
       {
         queue.dequeue
+        
+        // yeah yeah, reassigning too many times.
+        useReadQueue = true
       }   
     }
     else
@@ -173,18 +176,13 @@ class FARQueue extends Actor
       // loop until we either get NO entry (empty queues) or we get an entry.id
       // that is greater than the lastReadId value
       var done = false
-      log.debug("lastReadId is " + lastReadId.toString() )
+      //log.debug("lastReadId is " + lastReadId.toString() )
       while ( ! done )
       {
-        log.debug("in loop")
         entry = getNextEntry()
-        if ( entry != null )
-        {
-          log.debug("entry retrieved is " + entry.id.toString() )
-        }
+        
         if (( entry == null) || ( entry.id > lastReadId ))
         {
-          log.debug("marking true")
           
           if ( entry != null )
           {
@@ -250,10 +248,10 @@ class FARQueue extends Actor
         // just use regular Q....
         if ( !queue.isEmpty )
         {
-          log.debug("queue size is " + queue.size.toString() )
+          //log.debug("queue size is " + queue.size.toString() )
           entry = queue.dequeue
           
-          log.debug("queue not empty, had entry " + entry.id.toString() )
+          //log.debug("queue not empty, had entry " + entry.id.toString() )
         }
       }
       
