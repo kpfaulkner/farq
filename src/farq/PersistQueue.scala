@@ -111,7 +111,7 @@ class PersistQueue
       fn = fileList(0).getPath()
     }
     
-    //log.debug("oldest filename " + fn )
+    log.debug("oldest filename " + fn )
     return fn
     
   }

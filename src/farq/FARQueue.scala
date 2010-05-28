@@ -64,7 +64,7 @@ class FARQueue extends Actor
   // indicate if read queue should be used.
   // This should only be set to true if the reading of the queue isn't
   // being performed quick enough and a back log starts to happen.
-  var useReadQueue = false
+  var useReadQueue = true
   
   // put here if we're trying to retrieve it.
   // will be invisible for a while, but then returned to visible 
