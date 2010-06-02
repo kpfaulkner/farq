@@ -48,6 +48,69 @@ import java.io.ObjectInputStream
 
 import FARQ.Datatypes._
 
+// identifies file to read, and deletes older/used files.
+object FileIdentifier
+{
+  val log = Logger.get
+  
+  // queue sizes.
+  var cacheDir = Configgy.config.getString("queue_dir", "cache" )
+  
+  // for reading. double duh.
+  var inFileStream:FileInputStream = null
+
+  
+  def getOldestFilename( ) : String =
+  {
+    log.info("PersistQueue::getOldestFilename start")  
+    var fn = ""
+    
+    var f = new File( cacheDir )
+    
+    var fileArray = f.listFiles()
+    
+    var fileList = fileArray.toList
+    
+    // sort the sucker by modified time.
+    fileList.sort( (a,b) => a.lastModified > b.lastModified ) 
+    
+    var nonUsedFileList = fileList.filter( x=> !x.contains("used"))
+    if ( nonUsedFileList.length > 0 )
+    {
+      fn = nonUsedFileList(0).getPath()
+    }
+    
+    log.debug("oldest filename " + fn )
+    return fn
+    
+  }
+  
+  def  getOldestDestroyUsed( oldFile:String ): String =
+  {
+    // oldFile passed in is a queue name that has been used and finished with
+    // so delete the file.
+     
+    if ( oldFile != "")
+    {
+       var fn2 = "./"+oldFile
+       
+      // need to close streams?
+      new File( fn2 ).delete
+    }
+    
+    // find oldest file.
+    var filename = getOldestFile()
+    
+    var newFileName = filename + ".used"
+    // rename file so it wont be picked up next time.
+    new File( filename ).renameTo( newFileName )
+    
+    return newFileName
+    
+  }
+
+}
+
 class PersistQueue
 {
 
@@ -55,7 +118,7 @@ class PersistQueue
   
   // queue sizes.
   var cacheDir = Configgy.config.getString("queue_dir", "cache" )
-  var persistQueueSize = Configgy.config.getInt("persist_queue_size ", 1000000 )
+  var persistQueueSize = Configgy.config.getInt("persist_queue_size", 1000000 )
   
   // for writing. duh
   var outFileStream:FileOutputStream = null
@@ -66,6 +129,8 @@ class PersistQueue
   
   var fileSize = 0
 
+  var currentReadFile = ""
+  
   //openNewStream()
   
   def openOldestPersistedQueue( ) =
@@ -89,7 +154,8 @@ class PersistQueue
     
     // true param for allowing appending.
     outFileStream = new FileOutputStream( fn, true )
-    dataOutputStream = new DataOutputStream( outFileStream )  
+    dataOutputStream = new DataOutputStream( outFileStream )
+    fileSize = 0
   }
   
   def getOldestFilename( ) : String =
@@ -177,7 +243,10 @@ class PersistQueue
     
     var q = new Queue[ Entry ]()
     var done = false
-    var fn = getOldestFilename()
+    //var fn = getOldestFilename()
+    var fn = FileIdentifier.getOldestDestroyUsed( currentReadFile )
+    currentReadFile = fn
+    
     var previousFileName = ""
     while ( ( fn != "") && (!done) )
     {
@@ -223,7 +292,6 @@ class PersistQueue
       dis.close()
       inFileStream.close()
       previousFileName = fn
-      fn = getOldestFilename()
       
       // if we get here and the q is empty it means the entire persist file only has old information
       // which means it can be deleted.
@@ -231,20 +299,19 @@ class PersistQueue
       // HACK HACK HACK HORRIBLE STUFF.
       if ( q.isEmpty )
       {
-        if (fn == previousFileName )
+        fn = FileIdentifier.getOldestDestroyUsed( currentReadFile )
+        currentReadFile = fn
+      
+        // no file name means nothing to do.
+        if (fn == "")
         {
           closeAllStreams()
-        
+          done = true
         }
         
-        var fn2 = "./"+fn
-        //log.debug("deleting file " + fn2)
         dis.close()
         inFileStream.close()
         
-        // delete file.
-        new File( fn2 ).delete
-       
       }
       else
       {
