@@ -55,11 +55,7 @@ object FileIdentifier
   
   // queue sizes.
   var cacheDir = Configgy.config.getString("queue_dir", "cache" )
-  
-  // for reading. double duh.
-  var inFileStream:FileInputStream = null
 
-  
   def getOldestFilename( ) : String =
   {
     log.info("PersistQueue::getOldestFilename start")  
@@ -157,31 +153,7 @@ class PersistQueue
     dataOutputStream = new DataOutputStream( outFileStream )
     fileSize = 0
   }
-  
-  def getOldestFilename( ) : String =
-  {
-    log.info("PersistQueue::getOldestFilename start")  
-    var fn = ""
-    
-    var f = new File( cacheDir )
-    
-    var fileArray = f.listFiles()
-    
-    var fileList = fileArray.toList
-    
-    // sort the sucker by modified time.
-    fileList.sort( (a,b) => a.lastModified > b.lastModified ) 
-    
-    if ( fileList.length > 0 )
-    {
-      fn = fileList(0).getPath()
-    }
-    
-    log.debug("oldest filename " + fn )
-    return fn
-    
-  }
-  
+
   def add( entry: Entry ):Boolean =
   {
     log.info("PersistQueue::add start")
@@ -288,7 +260,7 @@ class PersistQueue
       
       //log.debug("queue length is " + q.size.toString() )
       
-
+      // make sure streams are closed.
       dis.close()
       inFileStream.close()
       previousFileName = fn
