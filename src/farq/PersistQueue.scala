@@ -59,6 +59,34 @@ object FileIdentifier
   // for reading. double duh.
   var inFileStream:FileInputStream = null
 
+  val usedExtension = ".used"
+  
+  // rename used files upon loading.
+  // since any used that that still exists during loading mightn't have been fully used
+  // so need to rename to make sure they'll get used to populate the queues again.
+  renameAllUsedFiles()
+  
+  def renameAllUsedFiles() =
+  {
+    log.info("FileIdentier::renameAllUsedFiles start")
+    var f = new File( cacheDir )
+    
+    var fileArray = f.listFiles()
+    
+    var fileList = fileArray.toList
+    
+    for ( file <- fileList )
+    {
+      var fn = file.getPath()
+      if ( fn.endsWith( usedExtension ))
+      {
+        // remove .used from name.
+        var newName = fn.substring(0, fn.length- usedExtension.length)
+        new File( fn ).renameTo( new File( newName ) )
+      }
+    }
+    
+  }
   
   def getOldestFilename( ) : String =
   {
@@ -74,7 +102,7 @@ object FileIdentifier
     // sort the sucker by modified time.
     fileList.sort( (a,b) => a.lastModified > b.lastModified ) 
     
-    var nonUsedFileList = fileList.filter( x=> !x.contains("used"))
+    var nonUsedFileList = fileList.filter( x=> !x.getPath().contains("used"))
     if ( nonUsedFileList.length > 0 )
     {
       fn = nonUsedFileList(0).getPath()
@@ -99,11 +127,11 @@ object FileIdentifier
     }
     
     // find oldest file.
-    var filename = getOldestFile()
+    var filename = getOldestFilename()
     
-    var newFileName = filename + ".used"
+    var newFileName = filename + usedExtension
     // rename file so it wont be picked up next time.
-    new File( filename ).renameTo( newFileName )
+    new File( filename ).renameTo( new File( newFileName ) )
     
     return newFileName
     
@@ -309,8 +337,6 @@ class PersistQueue
           done = true
         }
         
-        dis.close()
-        inFileStream.close()
         
       }
       else
