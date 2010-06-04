@@ -56,7 +56,7 @@ class FARQueue extends Actor
   var queue = new Queue[ Entry ]()
   
   // fallback read queue, incase reading to too slow.
-  var readQueue = new Queue[ Entry]()
+  //var readQueue = new Queue[ Entry]()
   
   // last id of the entry returned.
   var lastReadId = 0
@@ -164,7 +164,7 @@ class FARQueue extends Actor
     
   }
 
-  // shift from real Q to invisible Q.
+
   def handleGet( ): Entry =
   {
     log.info("FARQueue::handleGet start")
@@ -223,16 +223,14 @@ class FARQueue extends Actor
       {
         // try reading from readQueue
         // if empty, try and reload from persist queue.
-        if ( readQueue.isEmpty )
+        if ( queue.isEmpty )
         {
           // load from persist.
           // make sure that the queue loaded only has entry id's greater than lastReadId
-          readQueue = persistQueue.loadOldestPersistedQueue( lastReadId )
-          
-          
+          queue = persistQueue.loadOldestPersistedQueue( lastReadId )
         }
         
-        if ( !readQueue.isEmpty)
+        if ( !queue.isEmpty)
         {
           entry = readQueue.dequeue
         }
