@@ -46,11 +46,12 @@ Serialization to disk:
 FARQueue has 2 queues. One that is purely memory, used for when the consumers are outpacing the producers.
 The second memory queue is populated purely from deserialized queues from disk.
 
-The only tricky part is when we have many persisted queues and the consumers are outpacing the producers and we have to switch
-from read behind mode to purely from memory. The plan is that once we're down to a single persisted file (which means it's opened for writing ) we
-flick back the switch to tell the reader to retrieve from the "setting" memory queue. This simplistic method will only work if when we persist
-the memory Q we also clear it (and not try and keep it up to populated). This way when we restore the second last persisted file (the last being the one
-currently being written too) we *know* that the in memory and last file are the same. Then we just "flick the switch" to say read off memory Q again.
+The only tricky part is when we have many persisted queues and the consumers are outpacing the producers and we have
+to switch from read behind mode to purely from memory. The plan is that once we're down to a single persisted file
+(which means it's opened for writing ) we flick back the switch to tell the reader to retrieve from the "setting" memory
+queue. This simplistic method will only work if when we persist the memory Q we also clear it (and not try and keep it
+up to populated). This way when we restore the second last persisted file (the last being the one currently being written
+too) we *know* that the in memory and last file are the same. Then we just "flick the switch" to say read off memory Q again.
 FARK...
 
 THAT WAS EXPLAINED BADLY, REWORD IT!!!!
