@@ -55,8 +55,8 @@ class FARQueue extends Actor
   // main write queue.
   var queue = new Queue[ Entry ]()
   
-  // fallback read queue, incase reading to too slow.
-  //var readQueue = new Queue[ Entry]()
+  // Used for reading when in read-behind mode.
+  var readQueue = new Queue[ Entry]()
   
   // last id of the entry returned.
   var lastReadId = 0
@@ -64,19 +64,10 @@ class FARQueue extends Actor
   // indicate if read queue should be used.
   // This should only be set to true if the reading of the queue isn't
   // being performed quick enough and a back log starts to happen.
-  var useReadQueue = true
-  
-  // put here if we're trying to retrieve it.
-  // will be invisible for a while, but then returned to visible 
-  // if not deleted.
-  // really a list.
-  var invisibleQueue =  List[ Entry ]()
-  
+  var readBehind = false
+    
   val maxQueueSize = Integer.parseInt( Configgy.config.getString("queue_size", "200" ) )
 
-  // used to bumping off content.
-  var resizeFactor = Configgy.config.getString("resize_factor", "0.5").toFloat
-  
   var persistQueue = new PersistQueue()
   
   def act()
@@ -141,20 +132,18 @@ class FARQueue extends Actor
     {
       // if using read queue, then dont need to add to memory queue, just add directly to
       // persist queue.
-      if ( !useReadQueue )
-      {
-        // add to memory queue.
-        queue += entry
-      
-      }
+      // add to memory queue.
+      queue += entry
        
       // if memory queue too long, then trim a percentage.
-      while ( queue.length > maxQueueSize * resizeFactor )
+      while ( queue.length > maxQueueSize )
       {
-        queue.dequeue
-        
-        // yeah yeah, reassigning too many times.
-        useReadQueue = true
+        // clear memory queue.
+        queue.clear
+
+        // roll file.
+        persistQueue.roll()
+        readBehind = true
       }   
     }
     else
@@ -219,23 +208,25 @@ class FARQueue extends Actor
     {
     
       // check which queue we should be using.
-      if (  useReadQueue )
+      if (  readBehind )
       {
         // try reading from readQueue
         // if empty, try and reload from persist queue.
-        if ( queue.isEmpty )
+        if ( readQueue.isEmpty )
         {
           // load from persist.
           // make sure that the queue loaded only has entry id's greater than lastReadId
-          queue = persistQueue.loadOldestPersistedQueue( lastReadId )
+          readQueue = persistQueue.loadOldestPersistedQueue( lastReadId )
         }
         
-        if ( !queue.isEmpty)
+        if ( !readQueue.isEmpty)
         {
           entry = readQueue.dequeue
         }
         else
         {
+          // get from memory queue.
+          entry = queue.dequeue
           useReadQueue = false
         }
       }

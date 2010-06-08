@@ -179,6 +179,15 @@ class PersistQueue
     fileSize = 0
   }
 
+  // closes open file for writing,
+  // may do more in future.
+  def roll( ) =
+  {
+    outFileStream.close()
+    dataOutputStream.close()
+    dataOutputStream = null // FIXME
+  }
+  
   def add( entry: Entry ):Boolean =
   {
     log.info("PersistQueue::add start")
@@ -199,19 +208,6 @@ class PersistQueue
     dataOutputStream.write( entry.data )
     
     fileSize += entry.data.length
-    
-    // if stream is too big, then close it and open another.
-    if ( fileSize > persistQueueSize  )
-    {
-      // close stream
-      outFileStream.close()
-      dataOutputStream.close()
-      dataOutputStream = null // FIXME
-      
-      // open new stream.
-      openNewStream()
-      
-    }
     
     return true
     
