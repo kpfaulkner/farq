@@ -101,12 +101,7 @@ class FARQueue extends Actor
           sender ! ( new Status(  statusCode ), e)
         }
         
-        case ( FARQCommands.delCommand, id:Int ) =>
-        {
-          // delete existing one.
-          handleDel( id )
-          sender ! new Status( StatusCodes.DEL_SUCCESS )
-        }
+
 
       }
     }
@@ -189,11 +184,6 @@ class FARQueue extends Actor
         log.error("FARQueue::handleGet exception " + ex.toString() )
     } 
     
-    if ( entry != null )
-    {
-      lastReadId = entry.id
-    }
-    
     return entry
   }
 
@@ -225,9 +215,12 @@ class FARQueue extends Actor
         }
         else
         {
-          // get from memory queue.
-          entry = queue.dequeue
-          useReadQueue = false
+          if ( !queue.isEmpty )
+          {
+            // get from memory queue.
+            entry = queue.dequeue
+          }
+          readBehind = false
         }
       }
       else
@@ -254,27 +247,5 @@ class FARQueue extends Actor
     
     return entry
   }
-
-
-  // remove entry from invisible Q with given id.
-  def handleDel( id:Int )  =
-  {
-    log.info("FARQueue::handleDel start")
-    
-    try
-    {
-      // yeah yeah, reconstructing list as opposed to just removing from existing list... but will give it a go.
-      var newInvisibleQueue = invisibleQueue.filter( _.id != id )
-      
-      invisibleQueue = newInvisibleQueue
-      
-    }
-    catch
-    {
-      case ex: Exception =>
-        log.error("FARQueue::handleDel exception " + ex.toString() )
-    } 
-    
-
-  }  
+  
 }
