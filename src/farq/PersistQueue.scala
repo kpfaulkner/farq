@@ -57,6 +57,7 @@ object FileIdentifier
   var cacheDir = Configgy.config.getString("queue_dir", "cache" )
 
   val usedExtension = ".used"
+  val writingExtension = ".write"
   
   // rename used files upon loading.
   // since any used that that still exists during loading mightn't have been fully used
@@ -99,7 +100,7 @@ object FileIdentifier
     // sort the sucker by modified time.
     fileList.sort( (a,b) => a.lastModified > b.lastModified ) 
     
-    var nonUsedFileList = fileList.filter( x=> !x.getPath().contains("used"))
+    var nonUsedFileList = fileList.filter( x=> ( !x.getPath().contains( usedExtension) && !x.getPath().contains( writingExtension )) )
     if ( nonUsedFileList.length > 0 )
     {
       fn = nonUsedFileList(0).getPath()
@@ -110,6 +111,7 @@ object FileIdentifier
     
   }
   
+  // dont want to return the current file being written too.
   def  getOldestDestroyUsed( oldFile:String ): String =
   {
     // oldFile passed in is a queue name that has been used and finished with
@@ -125,11 +127,14 @@ object FileIdentifier
     
     // find oldest file.
     var filename = getOldestFilename()
-    
-    var newFileName = filename + usedExtension
-    // rename file so it wont be picked up next time.
-    new File( filename ).renameTo( new File( newFileName ) )
-    
+    var newFileName = ""
+    if ( filename != "" )
+    {
+      newFileName = filename + usedExtension
+      // rename file so it wont be picked up next time.
+      new File( filename ).renameTo( new File( newFileName ) )
+    }
+  
     return newFileName
     
   }
@@ -157,8 +162,8 @@ class PersistQueue
   var currentReadFile = ""
   var currentWriteFile = ""
   
-  //openNewStream()
-  
+  val usedExtension = ".used"
+  val writingExtension = ".write"
   
   def openStreamForReading( fn: String) =
   {
@@ -170,7 +175,7 @@ class PersistQueue
   // open new stream...   how to determine filename?
   def openNewStream( ) =
   {
-    var fn = cacheDir + "/" + System.nanoTime().toString()
+    var fn = cacheDir + "/" + System.nanoTime().toString()+writingExtension
     currentWriteFile = fn
     
     // true param for allowing appending.
@@ -185,6 +190,11 @@ class PersistQueue
   {
     outFileStream.close()
     dataOutputStream.close()
+    
+    // rename writing file to get rid of the .writing extension
+    var newName = currentWriteFile.substring(0, currentWriteFile.length- writingExtension.length)
+    new File( currentWriteFile ).renameTo( new File( newName ) )
+    
     dataOutputStream = null // FIXME
   }
   
@@ -240,10 +250,12 @@ class PersistQueue
     var fn = FileIdentifier.getOldestDestroyUsed( currentReadFile )
     currentReadFile = fn
     
+    log.debug("oldest fn returned is " + fn )
+    
     var previousFileName = ""
     while ( ( fn != "") && (!done) )
     {
-      //log.debug("fn is "+ fn )
+      log.debug("fn is "+ fn )
       
       var inFileStream = new FileInputStream( fn )
       var dis = new DataInputStream( inFileStream )
@@ -279,7 +291,7 @@ class PersistQueue
           log.debug("FARQHandler::loadOldestPersistedQueue end of file" )
       }
       
-      //log.debug("queue length is " + q.size.toString() )
+      log.debug("queue length is " + q.size.toString() )
       
       // make sure streams are closed.
       dis.close()

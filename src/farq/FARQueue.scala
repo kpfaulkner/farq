@@ -139,6 +139,7 @@ class FARQueue extends Actor
         // roll file.
         persistQueue.roll()
         readBehind = true
+        log.debug("switched to readBehind mode")
       }   
     }
     else
@@ -221,6 +222,7 @@ class FARQueue extends Actor
             entry = queue.dequeue
           }
           readBehind = false
+          log.debug("turning off readBehind mode")
         }
       }
       else
