@@ -40,7 +40,10 @@ import scala.actors.Actor._
 import net.lag.configgy.Configgy
 import net.lag.logging.Logger
 import scala.collection.mutable.Queue
-
+import java.io.FileOutputStream
+import java.io.FileInputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import FARQ.Datatypes._
 
 class FARQueue extends Actor
@@ -61,6 +64,9 @@ class FARQueue extends Actor
   // last id of the entry returned.
   var lastReadId = 0
   
+  // counter...   after every xxx entries, we record the lastReadId to file.
+  var counter = 0
+  
   // indicate if read queue should be used.
   // This should only be set to true if the reading of the queue isn't
   // being performed quick enough and a back log starts to happen.
@@ -69,6 +75,48 @@ class FARQueue extends Actor
   val maxQueueSize = Integer.parseInt( Configgy.config.getString("queue_size", "200" ) )
 
   var persistQueue = new PersistQueue()
+  
+  // load lastReadId
+  loadLastReadId()
+  
+  // THIS IS WAY WAY WAY OVERKILL
+  // BUT WILL FIX LATER IF IS BOTTLENECK
+  def saveLastReadId() =
+  {
+
+    try
+    {
+      var outFileStream = new FileOutputStream( "latestRead", true )
+      var dataOutputStream = new DataOutputStream( outFileStream )
+    
+      dataOutputStream.writeInt( lastReadId )
+      dataOutputStream.close()
+      outFileStream.close()
+    }
+    catch
+    {
+      case ex: Exception =>
+        log.error("FARQueue::saveLastReadId exception " + ex.toString() )
+    }
+    
+  }
+  
+  def loadLastReadId() =
+  {
+    try
+    {
+      var inFileStream = new FileInputStream("latestRead" )
+      var dis = new DataInputStream( inFileStream )
+      lastReadId = dis.readInt()
+      dis.close()
+      inFileStream.close()
+    }
+    catch
+    {
+      case ex: Exception =>
+        log.error("FARQueue::loadLastReadId exception " + ex.toString() )
+    }
+  }
   
   def act()
   {
@@ -178,6 +226,11 @@ class FARQueue extends Actor
         }
       }
       
+      counter += 1
+      if ( counter % 1000 == 0 )
+      {
+        saveLastReadId()
+      }
     }
     catch
     {
