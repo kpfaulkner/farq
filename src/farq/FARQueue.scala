@@ -46,13 +46,58 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import FARQ.Datatypes._
 
+object CounterManager
+{
+  val log = Logger.get
+  
+  def saveInt( filename:String, count:Int ) =
+  {
+
+    try
+    {
+      var outFileStream = new FileOutputStream( filename, true )
+      var dataOutputStream = new DataOutputStream( outFileStream )
+    
+      dataOutputStream.writeInt( count )
+      dataOutputStream.close()
+      outFileStream.close()
+    }
+    catch
+    {
+      case ex: Exception =>
+        log.error("CounterManager::saveInt exception " + ex.toString() )
+    }
+    
+  }
+  
+  def loadInt(filename:String): Int =
+  {
+    var i = 0
+    try
+    {
+      var inFileStream = new FileInputStream(filename )
+      var dis = new DataInputStream( inFileStream )
+      i = dis.readInt()
+      dis.close()
+      inFileStream.close()
+    }
+    catch
+    {
+      case ex: Exception =>
+        log.error("CounterManager::loadInt exception " + ex.toString() )
+    }
+    
+    return i
+  }
+  
+}
+
+
 class FARQueue extends Actor
 {
 
-  // this is fraught with dangers....
-  var idCount = 1
-  
-  
+
+
   val log = Logger.get
 
   // main write queue.
@@ -60,12 +105,6 @@ class FARQueue extends Actor
   
   // Used for reading when in read-behind mode.
   var readQueue = new Queue[ Entry]()
-  
-  // last id of the entry returned.
-  var lastReadId = 0
-  
-  // counter...   after every xxx entries, we record the lastReadId to file.
-  var counter = 0
   
   // indicate if read queue should be used.
   // This should only be set to true if the reading of the queue isn't
@@ -77,46 +116,10 @@ class FARQueue extends Actor
   var persistQueue = new PersistQueue()
   
   // load lastReadId
-  loadLastReadId()
+  var lastReadId = CounterManager.loadInt( "latestRead")
   
-  // THIS IS WAY WAY WAY OVERKILL
-  // BUT WILL FIX LATER IF IS BOTTLENECK
-  def saveLastReadId() =
-  {
-
-    try
-    {
-      var outFileStream = new FileOutputStream( "latestRead", true )
-      var dataOutputStream = new DataOutputStream( outFileStream )
-    
-      dataOutputStream.writeInt( lastReadId )
-      dataOutputStream.close()
-      outFileStream.close()
-    }
-    catch
-    {
-      case ex: Exception =>
-        log.error("FARQueue::saveLastReadId exception " + ex.toString() )
-    }
-    
-  }
-  
-  def loadLastReadId() =
-  {
-    try
-    {
-      var inFileStream = new FileInputStream("latestRead" )
-      var dis = new DataInputStream( inFileStream )
-      lastReadId = dis.readInt()
-      dis.close()
-      inFileStream.close()
-    }
-    catch
-    {
-      case ex: Exception =>
-        log.error("FARQueue::loadLastReadId exception " + ex.toString() )
-    }
-  }
+  // this is fraught with dangers....
+  var idCount =  CounterManager.loadInt( "latestWritten")
   
   def act()
   {
@@ -164,9 +167,14 @@ class FARQueue extends Actor
     //log.debug("entry key is " + entry.key )
     
     //log.debug("existing length is " + queue.length.toString() )
-    
     entry.id = idCount
     idCount += 1
+    
+    // every 1000 save the file.
+    if ( idCount % 1000 == 0)
+    {
+      CounterManager.saveInt( "lastWritten", idCount )
+    }
     
     // persist the entry to disk.
     var persisted = persistQueue.add( entry )
@@ -226,10 +234,9 @@ class FARQueue extends Actor
         }
       }
       
-      counter += 1
-      if ( counter % 1000 == 0 )
+      if ( lastReadId % 1000 == 0 )
       {
-        saveLastReadId()
+        CounterManager.saveInt( "latestRead", lastReadId )
       }
     }
     catch
