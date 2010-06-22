@@ -40,16 +40,64 @@ import scala.actors.Actor._
 import net.lag.configgy.Configgy
 import net.lag.logging.Logger
 import scala.collection.mutable.Queue
-
+import java.io.FileOutputStream
+import java.io.FileInputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import FARQ.Datatypes._
+
+object CounterManager
+{
+  val log = Logger.get
+  
+  def saveInt( filename:String, count:Int ) =
+  {
+
+    try
+    {
+      var outFileStream = new FileOutputStream( filename, true )
+      var dataOutputStream = new DataOutputStream( outFileStream )
+    
+      dataOutputStream.writeInt( count )
+      dataOutputStream.close()
+      outFileStream.close()
+    }
+    catch
+    {
+      case ex: Exception =>
+        log.error("CounterManager::saveInt exception " + ex.toString() )
+    }
+    
+  }
+  
+  def loadInt(filename:String): Int =
+  {
+    var i = 0
+    try
+    {
+      var inFileStream = new FileInputStream(filename )
+      var dis = new DataInputStream( inFileStream )
+      i = dis.readInt()
+      dis.close()
+      inFileStream.close()
+    }
+    catch
+    {
+      case ex: Exception =>
+        log.error("CounterManager::loadInt exception " + ex.toString() )
+    }
+    
+    return i
+  }
+  
+}
+
 
 class FARQueue extends Actor
 {
 
-  // this is fraught with dangers....
-  var idCount = 1
-  
-  
+
+
   val log = Logger.get
 
   // main write queue.
@@ -57,9 +105,6 @@ class FARQueue extends Actor
   
   // Used for reading when in read-behind mode.
   var readQueue = new Queue[ Entry]()
-  
-  // last id of the entry returned.
-  var lastReadId = 0
   
   // indicate if read queue should be used.
   // This should only be set to true if the reading of the queue isn't
@@ -69,6 +114,12 @@ class FARQueue extends Actor
   val maxQueueSize = Integer.parseInt( Configgy.config.getString("queue_size", "200" ) )
 
   var persistQueue = new PersistQueue()
+  
+  // load lastReadId
+  var lastReadId = CounterManager.loadInt( "latestRead")
+  
+  // this is fraught with dangers....
+  var idCount =  CounterManager.loadInt( "latestWritten")
   
   def act()
   {
@@ -116,9 +167,14 @@ class FARQueue extends Actor
     //log.debug("entry key is " + entry.key )
     
     //log.debug("existing length is " + queue.length.toString() )
-    
     entry.id = idCount
     idCount += 1
+    
+    // every 1000 save the file.
+    if ( idCount % 1000 == 0)
+    {
+      CounterManager.saveInt( "lastWritten", idCount )
+    }
     
     // persist the entry to disk.
     var persisted = persistQueue.add( entry )
@@ -178,6 +234,10 @@ class FARQueue extends Actor
         }
       }
       
+      if ( lastReadId % 1000 == 0 )
+      {
+        CounterManager.saveInt( "latestRead", lastReadId )
+      }
     }
     catch
     {
