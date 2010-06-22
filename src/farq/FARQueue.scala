@@ -92,7 +92,9 @@ object CounterManager
   
 }
 
-
+// again, for this particular class I'm not too fussed about the catch all
+// exception handling. I want to make sure that the exceptions are logged
+// but not too fussed about the shotgun approach for the moment.
 class FARQueue extends Actor
 {
 

@@ -58,7 +58,9 @@ object FARQCommands
   
 }
 
-
+// before anyone complains, yes I have the shotgun catch all exception handling here. But I want to make sure that the server doesn't
+// die for any particular reason.
+// As long as I'm logging the exceptions at the entry points, I'm happy.
 class FARQHandler(fq: FARQueue) extends Actor
 {
 
